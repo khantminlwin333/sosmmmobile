@@ -128,6 +128,9 @@ export default function PrivacyPolicyScreen({ navigation }) {
           <Image source={require('./assets/donation.jpg')}
            style = {{ width: '300', height: '370' }}
           />
+           <Image source={require('./assets/binance.png')}
+           style = {{ width: '300', height: '370' }}
+          />
           <TouchableOpacity onPress={handlePaypalClick} style={styles.paypallink}><Text style={styles.paypaltext}>Donate by PayPal (Click Here)</Text></TouchableOpacity>
         </View>
         )}

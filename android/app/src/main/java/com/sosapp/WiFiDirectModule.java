@@ -9,6 +9,8 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.*;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -18,6 +20,7 @@ import java.net.Socket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
+
 
 public class WiFiDirectModule extends ReactContextBaseJavaModule {
     private final WifiP2pManager wifiP2pManager;
@@ -212,38 +215,52 @@ public void getConnectionInfo(Promise promise) {
     }
 
     @ReactMethod
-    public void connectToPeer(String deviceAddress, final Promise promise) {
-        WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = deviceAddress;
+public void connectToPeer(String deviceAddress, final Promise promise) {
+    WifiP2pConfig config = new WifiP2pConfig();
+    config.deviceAddress = deviceAddress;
 
-        sendEvent("onConnectionStatus", "Connecting to peer: " + deviceAddress);
+    sendEvent("onConnectionStatus", "Connecting to peer: " + deviceAddress);
 
-        wifiP2pManager.connect(channel, config, new WifiP2pManager.ActionListener() {
-            public void onSuccess() {
-                sendEvent("onConnectionStatus", "Connection success, getting info...");
-                // Now get the connection info after success
+    wifiP2pManager.connect(channel, config, new WifiP2pManager.ActionListener() {
+        public void onSuccess() {
+            sendEvent("onConnectionStatus", "Connection initiated. Waiting for group...");
+
+            // Delay before checking connection info
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 wifiP2pManager.requestConnectionInfo(channel, new WifiP2pManager.ConnectionInfoListener() {
                     @Override
                     public void onConnectionInfoAvailable(WifiP2pInfo info) {
                         if (info.groupFormed) {
                             String ip = info.groupOwnerAddress.getHostAddress();
-                            Log.d(TAG, "Connected to peer, group owner IP: " + ip);
-                            sendEvent("onConnectionStatus", "Connected to peer, group owner IP: " + ip);
-                            promise.resolve(ip);  // ✅ Return actual IP to JavaScript
+                            Log.d(TAG, "✅ Group formed. Group owner IP: " + ip);
+                            sendEvent("onConnectionStatus", "Connected to peer. IP: " + ip);
+                            promise.resolve(ip);
                         } else {
-                            sendEvent("onConnectionStatus", "Group not formed yet.");
+                            sendEvent("onConnectionStatus", "⚠️ Group not formed yet.");
                             promise.reject("NO_GROUP", "Group not formed yet.");
                         }
                     }
                 });
-            }
+            }, 4000); // Wait 4 seconds before checking connection info
 
-            public void onFailure(int reason) {
-                sendEvent("onConnectionStatus", "Connection failed: " + reason);
-                promise.reject("CONNECT_FAILED", "Connection failed: " + reason);
-            }
-        });
+        }
+
+       public void onFailure(int reason) {
+    String reasonStr;
+    switch (reason) {
+        case WifiP2pManager.P2P_UNSUPPORTED: reasonStr = "P2P Unsupported"; break;
+        case WifiP2pManager.BUSY: reasonStr = "Framework Busy"; break;
+        case WifiP2pManager.ERROR: reasonStr = "Internal Error"; break;
+        default: reasonStr = "Unknown";
     }
+
+    Log.e(TAG, "❌ Connection failed: " + reason + " (" + reasonStr + ")");
+    sendEvent("onConnectionStatus", "Connection failed: " + reasonStr);
+    promise.reject("CONNECT_FAILED", "Connection failed: " + reasonStr);
+}
+
+    });
+}
 
     @ReactMethod
     public void startServer(final Promise promise) {

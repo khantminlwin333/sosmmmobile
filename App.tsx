@@ -92,12 +92,33 @@ function App(): React.JSX.Element {
       if (enabled) console.log('🔓 Notification Permission Granted');
     });
     console.log('AppState:', AppState.currentState);
-
+//Registeration token
+    const registerDeviceToken = async (token: string) => {
+      try {
+        await fetch('https://sos-mm.fly.dev/api/devices/device-register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        console.log('✅ Token registered with backend');
+      } catch (err) {
+        console.error('❌ Failed to register token:', err);
+      }
+    };
     // Get device FCM token
     messaging().getToken().then(token => {
       console.log('📱 FCM Token:', token);
+      registerDeviceToken(token);
     });
 
+    messaging().onTokenRefresh(async(token) => {
+      console.log('🔁 Token refreshed:', token);      
+     try {
+        await registerDeviceToken(token);
+      } catch (error) {
+        console.error('Error handling token refresh:', error);
+      }
+    });
     // Subscribe to topic
     messaging().subscribeToTopic('all').then(() => {
       console.log('📢 Subscribed to topic: all');
@@ -106,6 +127,12 @@ function App(): React.JSX.Element {
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       try {
         console.log('📩 Foreground Message:', remoteMessage);
+
+        if (remoteMessage.data?.validate === 'true') {
+          console.log('✅ Silent validation received. No UI action taken.');
+          return;
+        }
+    
 
         // Create notification channel for foreground messages
         await notifee.createChannel({
@@ -194,7 +221,6 @@ function App(): React.JSX.Element {
       });
 
     // ---------- Notifee Foreground Tap Handler ----------
-    // (Optional) If a notification is tapped while the app is in the foreground
     const unsubscribeNotifeeForeground = notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.PRESS && detail.notification?.data?.targetScreen) {
         const target = detail.notification.data.targetScreen as keyof RootStackParamList;

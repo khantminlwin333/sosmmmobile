@@ -7,10 +7,8 @@ import App from './App.tsx';
 import {name as appName} from './app.json';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
-import Permisssions from './services/permissions.js';
 import remoteConfig from '@react-native-firebase/remote-config';
 import DeviceInfo from 'react-native-device-info';
-
 
 const checkForUpdate = async () => {
   try {
@@ -61,6 +59,10 @@ const checkForUpdate = async () => {
 messaging().setBackgroundMessageHandler(async remoteMessage => {
     try {
       console.log('📥 Background Message:', remoteMessage);
+      if (remoteMessage.data?.validate === 'true') {
+        console.log('✅ Silent validation received. No UI action taken.');
+        return;
+      }
   
       const title = remoteMessage?.notification?.title || 'SOS Alert';
       const body = remoteMessage?.notification?.body || 'You received SOS Message!';
@@ -102,7 +104,6 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 const MainApp = () => {
   useEffect(() => {
     // Initialize the app and check for permissions on app launch
-    Permisssions();
     checkForUpdate();
   }, []);
 

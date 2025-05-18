@@ -63,9 +63,7 @@ export default function SendSOSScreen() {
               if (result) {
                 setStatus('✅ Sent via Wi-Fi Direct');
               } else {
-                Alert.alert('Message can not sent via offline!', [
-                  { text: 'OK', onPress: () => navigation.replace('Sos') }
-                ]);
+                setStatus('Message can not send!')
               }
             }
           } catch (e) {
@@ -83,7 +81,7 @@ export default function SendSOSScreen() {
             { text: 'OK', onPress: () => navigation.replace('Sos') }
           ]);
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
       );
     } catch (err) {
       console.error('Top level send error:', err);
@@ -94,21 +92,17 @@ export default function SendSOSScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [message, navigation]);  // Dependencies: message and navigation will trigger re-creation of sendMessage when they change
-
+  }, [message, navigation]);  
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
     return true;
   };
-
-  useEffect(() => {
-    isSentRef.current = isSent; // Update the ref to reflect latest state
-  }, [isSent]);
 
   useEffect(() => {
     isSentRef.current = isSent;
